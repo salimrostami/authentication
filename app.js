@@ -37,7 +37,8 @@ async function main() {
 //Create the schema
 const userSchema = new mongoose.Schema({
   email: String,
-  password: String
+  password: String,
+  secret: String
 });
 
 // Modify the schema to use encryption/hashin strategies
@@ -75,7 +76,21 @@ app.get("/register", function(req, res){
 
 app.get("/secrets", nocache, function(req, res){
   if (req.isAuthenticated()) {
-    res.render("secrets");
+    User.find({"secret": {$ne: null}}, function(err, foundUsers){
+      if (!err) {
+        if(foundUsers){
+          res.render("secrets", {usersWithSecrets: foundUsers});
+        }
+      }
+    });
+  } else {
+    res.redirect("/login");
+  }
+});
+
+app.get("/submit", nocache, function(req, res){
+  if (req.isAuthenticated()) {
+    res.render("submit");
   } else {
     res.redirect("/login");
   }
@@ -130,6 +145,17 @@ app.post('/login',
 //   //     // if (foundUser.password === md5(req.body.password))
 //   //   }
 //   // });
+
+app.post("/submit", function(req, res){
+  User.findById(req.user.id, function(err, foundUser){
+    if (!err) {
+      if (foundUser) {
+        foundUser.secret = req.body.secret;
+        foundUser.save(()=>res.redirect("/secrets"));
+      }
+    }
+  });
+});
 
 // Set up the app port
 app.listen(3000, function() {
